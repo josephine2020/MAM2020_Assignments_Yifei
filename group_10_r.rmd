@@ -1,0 +1,53 @@
+---
+title: "AM03_AUT19 Group 10 Group Assignment"
+author: "Yifei Yu, Dominic Nadeau, Joséphine De Cuyper, Garima Agarwal"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    theme: flatly
+    highlight: zenburn
+    toc: yes
+    toc_float: yes
+---
+
+```{r, setup, include = FALSE}
+# Import libraries
+library(tidyverse)
+```
+
+# Question 1
+**a**: "<-" operator is the one I would use for assignment  
+**b**: When "=" and "<-" are used in creating an argument for a function, variable created by "<-" will be in the user's workspace while the one created by "==" will not.  
+**c**: Variable names must not start with special characters or numbers. Reserved words cannot be used as variable names.  
+**d**: Default numeric data type is _double_. 200 is interpreted as a __double__. 
+```{r, example for 1d}
+typeof(200)
+```
+**e**: There are numeric, character, integer and logical. Yes because it consists of only atmoic types that cannot be further divided.  
+
+# Question 2
+**a**: x < y < z will be evaluated as x < y & y < z  
+**b**: "==" is equality. "|" is or. "!=" is inequality. "&" is and. ">" is greatr than.  
+**c**: From highest to lowest, ==, !==, >, &, |.  
+**d**: TRUE & 5 & FALSE & "abc" & TRUE  
+**e**: (5 == 5) | ("abc" != "abc") & (1 > 0)
+
+# Question 3
+**a**: 
+```{r}
+tsla <- c(26150, 29870, 29980, 40740, 83500, 90700, 63000, 95200)
+names(tsla) = c('Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6', 'Q7', 'Q8')
+print(tsla)
+```
+
+**b**
+```{r}
+n = length(tsla)
+tot <- 0
+for (i in 1:n){
+    tot <- tot + tsla[i]
+}
+print(tot)
+```
+
+**c**: Anything between the bracket after the condition is the codee block while i is the index variable.

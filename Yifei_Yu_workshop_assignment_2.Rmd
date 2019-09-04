@@ -1,0 +1,369 @@
+---
+title: "Assignment Session 2: Inferential Statistics"
+author: "Yifei Yu"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    theme: flatly
+    highlight: zenburn
+    toc: yes
+    toc_float: yes
+---
+
+```{r, setup, include=FALSE}
+# Import Libraries and Adjust Global Settings
+library(mosaic)
+library(tidyverse)
+library(infer)
+library(here)
+library(gapminder)
+library(lubridate)
+options(digits=3)
+
+knitr::opts_chunk$set(
+  tidy=FALSE,
+  size="small")
+```
+
+## Task 1: Joining data frames  
+### Load and Join dataframes  
+```{r, get_data, message=FALSE}
+# load gapminder HIV data
+hiv <- read_csv("adults_with_hiv_percent_age_15_49.csv")
+
+# get fertility rate from wbstats
+library(wbstats)
+fertility <- wb(country="countries_only",
+                indicator = "SP.DYN.TFRT.IN", 
+                startdate = 1960, enddate = 2016)
+
+fertility <- fertility %>%
+  rename(fer_rate = value)
+
+```
+
+```{r}
+# Join three dataframes
+hiv_long <-
+  gather(data = hiv, key = date, value = prevalence, 2:34, na.rm = TRUE)
+
+gapminder <- gapminder %>%
+    rename(date = year) %>%
+    mutate(date = as.character(date), country = as.character(country))
+joined <- full_join(hiv_long, fertility, by = c("country", "date"))
+joined <- full_join(joined, gapminder, by = c("country", "date"))
+```
+
+### Question 1
+```{r}
+ggplot(data = joined, aes(x = prevalence, y = lifeExp)) + 
+  geom_point(color="goldenrod2", alpha=0.75, shape=1) + 
+  geom_smooth(color="red", size=1, linetype=5, se=FALSE) + 
+  labs(title = "Scatter Plot Between HIV Prevalence and Life Expectancy", x = "HIV Prevalence", y = "Life Expectancy") +
+  theme_light() +
+  theme(
+    plot.title = element_text(face="bold"), 
+    axis.title.x = element_text(face="bold"),
+    axis.title.y = element_text(face="bold"),
+  )
+```
+
+#### Inference from Question 1  
+Despite class imbalance between countries with high HIV Prevalance and countries with low HIV prevalence, the overall trend suggests countries with higher HIV Prevalence have shorter life expectancy. However, HIV Prevalence seems to have less effect on life expectancy after reaching a threshold around 3
+
+### Question 2
+```{r}
+ggplot(data = joined, aes(x = fer_rate, y = gdpPercap)) + 
+  geom_point(color="goldenrod2", alpha=0.75, shape=1) +
+  geom_smooth(color="red", size=1, linetype=5, se=FALSE) +
+  labs(title = "Scatter Plot Between Fertility Rate and GDP Per Capita", x = "Fertility Rate", y = "Log10(GDP Per Capita)") +
+  theme_light() +
+  theme(
+    plot.title = element_text(face="bold"), 
+    axis.title.x = element_text(face="bold"),
+    axis.title.y = element_text(face="bold"),
+  ) +
+  scale_y_log10()
+```
+
+#### Inference for Question 2  
+The graph suggests countries with lower fertility rate also have higher GDP per capita. Very few countries with high fertility rate have high GDP per capita. We can speculate that the reason behind the phenomenon is countries with lower fertility rate have more resources to distribute to current members of the society. Nordic countries will be prime examples to this line of arguments, however, since correlation isn't casuation, the argument remains a hypothesis.
+
+### Question 3
+```{r}
+joined_missing <- joined %>%
+  filter(!is.na(continent)) %>%
+  group_by(continent) %>%
+  filter(is.na(prevalence)) %>%
+  mutate(n_missing = n()) %>%
+  summarize(actual_value = mean(n_missing)) %>%
+  arrange(desc(actual_value))
+  
+ggplot(data = joined_missing, aes(x = reorder(continent, actual_value), y = actual_value)) + 
+  geom_bar(stat = "identity", width = 0.3, fill = "navy") +
+  labs(title = "Continents Ranked by the Number of Missing HIV Variable Values", x = "Continent Names", y = "Numbers of Missing Values") +
+  theme_light() +
+  theme(
+    plot.title = element_text(face="bold"), 
+    axis.title.x = element_text(face="bold"),
+    axis.title.y = element_text(face="bold"),
+  ) +
+    coord_flip()
+```
+ 
+#### Inference for Question 3  
+The most populous continents Africa and Asia unsurpringly have more cases of missing HIV data. The stituation is probably exacebated by the fact that most parts of Africa and Asia are not nearly as industrialised as Europe and North America. Oceania's low number of missing fertility data can possibly be attributed to both its relatively low population count and its high degree of industrialisation.  
+ 
+### Question 4
+```{r}
+joined_country <- joined %>%
+  group_by(country) %>%
+  filter(is.na(fer_rate)) %>%
+  mutate(n_missing = n()) %>%
+  summarise(actual_value = mean(n_missing)) %>%
+  arrange(desc(actual_value)) %>%
+  slice(1:25)
+
+ggplot(data = joined_country, aes(x = reorder(country, actual_value), y = actual_value)) + 
+  geom_bar(stat = "identity", fill = "navy") +
+  labs(title = "Top 25 Countries with the Most Number of Missing Fertility Data", x = "Countries", y = "Number of Missing Fertility Data") +
+  theme_light() +
+  theme(
+    plot.title = element_text(face="bold"), 
+    axis.title.x = element_text(face="bold"),
+    axis.title.y = element_text(face="bold"),
+  ) +
+  coord_flip()
+```
+
+
+
+## Task 2: Climate change and temperature anomalies 
+```{r weather_data, message=FALSE}
+
+weather <- 
+  read_csv("https://data.giss.nasa.gov/gistemp/tabledata_v3/NH.Ts+dSST.csv", 
+           skip = 1, 
+           na = "***")
+
+```
+
+### Clean up the dataset  
+```{r tidyweather}
+# Convert wide formatted data to long formatted data
+tidyweather <- weather %>%
+  select("Year": "Dec") %>%
+  gather(key = "month", value = "delta", Jan:Dec) %>%
+  rename(year = Year)
+```
+
+### Plotting Information  
+```{r scatter_plot, warning=FALSE}
+
+tidyweather <- tidyweather %>%
+  mutate(date = ymd(paste(as.character(year), month, "1")),
+         month = month(date, label=TRUE),
+         year = year(date))
+
+ggplot(tidyweather, aes(x=date, y = delta))+
+  geom_point()+
+  geom_smooth(color="red") +
+  theme_bw() +
+  labs (
+    title = "Weather Anomalies"
+  )
+
+```
+
+### Facetted Plot  
+```{r facet_wrap, echo=FALSE, warning=FALSE}
+ggplot(tidyweather, aes(x=date, y = delta))+
+  geom_point()+
+  geom_smooth(color="red") +
+  theme_bw() +
+  labs (
+    title = "Weather Anomalies"
+  ) +
+  facet_wrap("month")
+```
+
+### Label data with decades
+```{r intervals}
+
+comparison <- tidyweather %>% 
+  filter(year>= 1881) %>%     #remove years prior to 1881
+  #create new variable 'interval', and assign values based on criteria below:
+  mutate(interval = case_when(
+    year %in% c(1881:1920) ~ "1881-1920",
+    year %in% c(1921:1950) ~ "1921-1950",
+    year %in% c(1951:1980) ~ "1951-1980",
+    year %in% c(1981:2010) ~ "1981-2010",
+    TRUE ~ "2011-present"
+  ))
+
+```
+
+### Monthly temperature anomality plot
+```{r density_plot, warning=FALSE}
+
+ggplot(comparison, aes(x=delta, fill=interval))+
+  geom_density(alpha=0.2) + 
+  theme_bw() +  
+  labs (
+    title = "Density Plot for Monthly Temperature Anomalies",
+    y     = "Density"
+  )
+
+```
+
+### Annual temprature anomaly plot
+```{r averaging, eval=FALSE, warning=FALSE}
+
+#creating yearly averages:
+average_annual_anomaly <- tidyweather %>% 
+  group_by(year) %>%   #grouping data by Year
+  #creating new variable using summarise() and averaging data using mean()
+  #set na.rm=TRUE to elimate NA values 
+  summarise(annual_average_delta = mean(delta, na.rm=TRUE)) 
+
+#plotting the data:
+ggplot(average_annual_anomaly, aes(x=year, y= annual_average_delta))+
+  geom_point()+
+  #adding y-axis line using y-intercept as 0, other parameters are optional:
+  geom_smooth() +
+  theme_bw() +
+  labs (
+    title = "Average Yearly Anomaly",
+    y     = "Average Annual Delta"
+  )                         
+
+
+```
+
+
+### Hypothesis Test
+**Null Hypothesis: The difference in average temperature deviation since 2011 is not statistically different from 1.5 degrees
+Alternative Hypothesis: The difference in average temprature deviation since 2011 is statistically different from 1.5 degrees**  
+```{r}
+t.test(tidyweather$delta, mu = 1.5)
+```
+Since p-value is smaller than 0.05, we reject the null hypothesis that average temperature since 2011 is not statistically different from 1.5 degrees.
+
+## Task 3: Student survey 
+### Testing for differences  
+```{r load-survey-data}
+# Import data
+survey <- read_csv("student_survey.csv")
+```
+### Haircuit Problem  
+Null Hypothesis: The amount spent on the last haircuit is the same between male and female students
+Alternative Hypothesis: The amount spent on the last haircuit is different between male and female students
+```{r}
+# Produce null distribution
+survey <- survey %>%
+  mutate(gender = as.factor(gender))
+glimpse(survey)
+null_distribution_haircut <- survey %>%
+  specify(last_haircut ~ gender) %>%
+  hypothesize(null = "independence") %>%
+  generate(reps = 5000, type = "permute") %>%
+  calculate("diff in means", order = c("Male", "Female"))
+
+# Produce summary stats
+obs_diff_means <- survey %>%
+  specify(last_haircut ~ gender) %>%
+  calculate("diff in means", order = c("Male", "Female"))
+
+# Perform visualisation
+null_distribution_haircut %>%
+  get_p_value(obs_stat = obs_diff_means, direction = "both")
+
+visualize(null_distribution_haircut) +
+  shade_p_value(obs_stat = obs_diff_means, direction = "both")
+```
+We reject the null hypothesis that male and female students spend the same amount in the last haircut.  
+
+### Marijuana Problem
+Null Hypothesis: The proportion of people who have tried marijuana is the same between male and female students
+Alternative Hypothesis: The proportion of people who have tried marijuana is not the same between male and female students
+
+```{r}
+# Produce null distribution
+survey <- survey %>%
+  mutate(gender = as.factor(gender), marijuana = as.factor(marijuana))
+glimpse(survey)
+null_distribution_marijuana <- survey %>%
+  specify(marijuana ~ gender, success = 'Yes') %>%
+  hypothesize(null = "independence") %>%
+  generate(reps = 5000, type = "permute") %>%
+  calculate("diff in props", order = c("Male", "Female"))
+
+# Produce summary stats
+obs_diff_props <- survey %>%
+  specify(marijuana ~ gender, success = 'Yes') %>%
+  calculate("diff in props", order = c("Male", "Female"))
+
+# Perform visualisation
+null_distribution_marijuana %>%
+  get_p_value(obs_stat = obs_diff_props, direction = "both")
+
+visualize(null_distribution_marijuana) +
+  shade_p_value(obs_stat = obs_diff_props, direction = "both")
+```
+We fail to reject the null hypothesis that the proportion of people who tried marijuana is the same between male and female students.  
+
+## Task 4: Trump average approval ratings 
+
+<center>
+![](images/trump_approval.png)
+</center>
+
+<center>
+![](images/trump_average_approval.png)
+</center>
+
+### Plotting  
+```{r}
+# Flag the dates
+poll <- read_csv("approval_polllist.csv")
+glimpse(poll)
+poll <-  poll %>% 
+  mutate(
+    startdate = mdy(startdate),
+    enddate = mdy(enddate),
+    modeldate = mdy(modeldate)
+  )
+
+# Aggregate the data based on enddates
+new_poll <- poll %>%
+  group_by(enddate, subgroup) %>%
+  summarize(approve_agg = mean(approve), disapprove_agg = mean(disapprove))
+
+# Plot aggregated time-series data
+ggplot(data = new_poll, aes(x = enddate, y = approve_agg, shape = ".")) + 
+  geom_point(colour="#009F29", alpha = 0.3) +
+  geom_point(aes(x=enddate, y= disapprove_agg, shape = "."), colour = "deeppink2", alpha = 0.3) +
+  theme_bw() +
+  facet_grid(rows = vars(subgroup)) +
+  theme(legend.position="none") +
+  scale_x_date(limits = c(ymd("2017-01-20"),NA),date_breaks="2 months",date_labels="%m-%Y")+
+  theme(axis.text.x = element_text(angle = 45, size = 8, hjust = 1))+
+  labs(
+    title = "Trump's Mean Approval vs Disapproval Ratings",
+    x= "", y= "",
+    caption = 'Data source: https://projects.fivethirtyeight.com/trump-approval-ratings/'
+  )
+```
+
+## Challenge: Ridge plots
+
+Using your newfound visualisation skills (and referencing [the `ggridges` vignette](https://cran.r-project.org/web/packages/ggridges/vignettes/introduction.html)), make a ridge plot showing the distribution of temperature anomalies from the NASA dataset over different periods. Save this plot as a PNG file in your `images` folder with `ggsave()`
+
+
+## Rubric
+
+Check minus (1/5): Displays minimal effort. Doesn't complete all components. Code is poorly written and not documented. Uses the same type of plot for each graph, or doesn't use plots appropriate for the variables being analyzed. 
+
+Check (4/5): Solid effort. Hits all the elements. No clear mistakes. Easy to follow (both the code, its documentation, and the output). 
+
+Check plus (5/5): Finished all components of the assignment correctly and addressed challenge. Code is well-documented (both self-documented and with additional comments as necessary). Used tidyverse, instead of base R. Graphs and tables are properly labelled. Analysis is clear and easy to follow, either because graphs are labeled clearly and you've written additional text to describe how you interpret the output.
