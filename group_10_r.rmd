@@ -16,49 +16,44 @@ library(tidyverse)
 ```
 
 # Question 1
-**a**: "<-" operator is the one I would use for assignment  
-**b**: When "=" and "<-" are used in creating an argument for a function, variable created by "<-" will be in the user's workspace while the one created by "==" will not.  # this is not a difference between = and <-, this is a difference between == and <-.
-**b**: The <- operator has higher precedence over the = operator.
-**c**: Variable names must not start with special characters or numbers. Reserved words cannot be used as variable names.  
-**d**: Default numeric data type is _double_. 200 is interpreted as a __double__. 
+# (a): "<-" the assignment operator 
+# (b): When "=" and "<-" are used in creating an argument for a function, variable created by "<-" will be in the user's global environment while the one created by "=" will not. 
+# (b): The <- operator has higher precedence over the = operator.
+# (c): Variable name can only contain letters, numbers, dots and underscores and should start with a letter or a dot that is not followed by a number. Furthermore, keywords cannot be used as variable names.  
+# (d): Default numeric data type is _double_. 200 is interpreted as a __double__. 
 ```{r, example for 1d}
 typeof(200)
 ```
-**e**: There are numeric, character, integer and logical. Yes because it consists of only atmoic types that cannot be further divided. # integer is a subset of numeric, thus not a type on its own.
-**e**: The 4 basic data types are: character, numeric, complex and logical. It is correct to say string "I love LBS" is an atomic vector, because it is a character atomic vector of length 1.
+# (e): The 4 basic data types are: character, numeric, complex and logical. It is correct to say string "I love LBS" is an atomic vector, because it is a character atomic vector of length 1.
 
 # Question 2
-**a**: x < y < z will be evaluated as x < y & y < z  # it will not be evaluated that way. It would lead to an error.
-**a**: The correct syntax is: x < y & y < z
-**b**: "==" is equality. "|" is or. "!=" is inequality. "&" is and. ">" is greater than.  
-**c**: From highest to lowest:
-  *  ==, !==, >
-  * &
-  * | 
-**d**: TRUE & 5 & FALSE & "abc" & TRUE  # This does not properly evaluate the relational operator, 5 and "and" are part of relations
-**d**: TRUE | FALSE & TRUE
-**e**: (5 == 5) | ("abc" != "abc") & (1 > 0) # this is missing a set of parenthesis to evaluate | vs &
-**e**: (5 == 5) | (("abc" != "abc") & (1 > 0))
+# (a): The correct syntax is: x < y & y < z. All relational operators have equal precedence and R interprets the order by applying left to right associativity. 
+# (b): "==" is equality check sign (relational operator). "|" is or (logical operator). "!=" is inequality (relational operator). "&" is and (logical operator). ">" is greater than (relational operator).  
+# (c): From highest to lowest:
+# ==, !==, > (relational operators first)
+# &
+# | 
+# (d): TRUE | FALSE & TRUE
+# (e): (5 == 5) | (("abc" != "abc") & (1 > 0))
 
 # Question 3
-**a**: 
+# (a): 
 ```{r}
 tsla <- c(26150, 29870, 29980, 40740, 83500, 90700, 63000, 95200)
 names(tsla) = c('Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6', 'Q7', 'Q8')
 print(tsla)
 ```
 
-**b**
+# (b): 
 ```{r}
-n = length(tsla)
-tot <- 0
+n = length(tsla)  # variable where you store your data
+tot <- 0    # variable where you store your result 
 for (i in 1:n){
-    tot <- tot + tsla[i]
+    tot <- tot + tsla[i]         #code block where [i] is index variable
 }
 print(tot)
 ```
 
-**c**: Anything between the bracket after the condition is the codee block while i is the index variable. # could be formulated a bit more clearly
-**c**:   
-  * {tot <- tot + tsla[i]} is the code block
-  * The i in (i in 1:n) is the index variable
+# (c): 
+# {tot <- tot + tsla[i]} is the code block
+# The i in (i in 1:n) is the index variable
